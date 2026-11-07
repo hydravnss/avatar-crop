@@ -288,7 +288,9 @@ function showModal(img, file) {
             applyViewportSize(viewport, ratio);
             const W = viewport.clientWidth;
             const H = viewport.clientHeight;
-            baseScale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+            // Contenir (min) et non couvrir (max) : au zoom 1 toute l'image est visible.
+            // L'ancien max() remplissait le cadre 2:3 et recadrait tout seul.
+            baseScale = Math.min(W / img.naturalWidth, H / img.naturalHeight) || 1;
             userZoom = 1;
             const s = displayedScale();
             ox = (W - img.naturalWidth * s) / 2;
@@ -406,6 +408,11 @@ function showModal(img, file) {
 
         overlay.querySelector('.ac-ok').addEventListener('click', async () => {
             try {
+                // Pas zoomé = on envoie l'image entière, sans recadrage.
+                if (userZoom <= 1.001) {
+                    finish(file);
+                    return;
+                }
                 const s = displayedScale();
                 const srcX = -ox / s;
                 const srcY = -oy / s;
