@@ -1,0 +1,14 @@
+{
+    "display_name": "Avatar Crop",
+    "loading_order": 5,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "hydravnss",
+    "version": "1.0.0",
+    "minimum_client_version": "1.12.0",
+    "auto_update": true,
+    "homePage": "https://github.com/hydravnss/avatar-crop",
+    "description": "FR: Zoomer, dézoomer et recadrer la photo de profil d'un personnage (bot) à l'upload. EN: Zoom, zoom out and crop a character (bot) profile picture on upload."
+}
