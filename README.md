@@ -23,6 +23,9 @@ Quand tu choisis une image pour l’avatar d’un bot :
 
 Les GIF sont envoyés tels quels, pour ne pas perdre l’animation.
 
+Dans le chat et les listes, l’extension affiche l’image entière (`object-fit: contain`) et remplace les miniatures serveur recadrées par l’original, pour empêcher le zoom automatique des ronds.
+
+
 ## Pourquoi pas le recadrage natif ?
 
 Le popup Cropper.js de SillyTavern impose un cadre 2:3 qui remplit l’image (`autoCropArea: 1`). Sur une photo paysage, il ne garde souvent que la bande centrale, et le serveur recadre encore (`crop` puis `cover` 512×768). Ici tu contrôles le zoom et le cadrage, puis l’image déjà recadrée est envoyée.

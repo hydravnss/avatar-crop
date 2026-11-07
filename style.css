@@ -1,6 +1,17 @@
 /* Avatar Crop — éditeur de recadrage mobile-first.
    Variables de thème ST uniquement ; pas de transformation sur un ancêtre hors modal. */
 
+/* Empêche le zoom CSS (object-fit: cover) dans le chat, les listes et l'éditeur. */
+body.ac-contain .avatar img,
+body.ac-contain #chat .mes .avatar img,
+body.ac-contain #rm_print_characters_block .avatar img,
+body.ac-contain #user_avatar_block img,
+body.ac-contain img.avatar {
+    object-fit: contain !important;
+    object-position: center center !important;
+    background-color: #111;
+}
+
 #ac_settings .ac-hint {
     opacity: 0.75;
     font-size: 0.9em;

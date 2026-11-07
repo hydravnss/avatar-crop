@@ -506,6 +506,81 @@ function showModal(img, file) {
     });
 }
 
+/* ------------------------------------------------------------------ affichage : pas de zoom CSS ni de miniatures recadrées */
+
+function applyCss() {
+    document.body.classList.toggle('ac-contain', !!(settings && settings.enabled));
+}
+
+const THUMB_RE = /^\/thumbnail\?type=(avatar|persona)&file=([^&]+)(?:&t=\d+)?$/;
+let thumbObserver = null;
+
+function originalUrlFor(src) {
+    let path = src;
+    try { const u = new URL(src, location.origin); path = u.pathname + u.search; } catch { /* ignore */ }
+    const m = THUMB_RE.exec(path);
+    if (!m) return null;
+    return m[1] === 'avatar' ? `/characters/${m[2]}` : `/User Avatars/${m[2]}`;
+}
+
+function bypassThumb(img) {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (!settings?.enabled) return;
+    const src = img.getAttribute('src');
+    if (!src) return;
+    const orig = originalUrlFor(src);
+    if (!orig) return;
+    img.dataset.acOrig = src;
+    img.setAttribute('src', orig);
+}
+
+function restoreThumbs() {
+    document.querySelectorAll('img[data-ac-orig]').forEach((img) => {
+        img.setAttribute('src', img.dataset.acOrig);
+        delete img.dataset.acOrig;
+    });
+}
+
+function scanThumbs() {
+    if (!settings?.enabled) return;
+    document.querySelectorAll('img[src*="/thumbnail?"]').forEach(bypassThumb);
+}
+
+function refreshThumbs() {
+    const ts = Date.now();
+    document.querySelectorAll('img[data-ac-orig]').forEach((img) => {
+        const base = originalUrlFor(img.dataset.acOrig) || '';
+        if (base) img.setAttribute('src', `${base}?ac=${ts}`);
+    });
+}
+
+function startThumbObserver() {
+    if (thumbObserver) return;
+    thumbObserver = new MutationObserver((records) => {
+        if (!settings?.enabled) return;
+        for (const r of records) {
+            if (r.type === 'attributes') {
+                const img = r.target;
+                if (img instanceof HTMLImageElement && /\/thumbnail\?/.test(img.getAttribute('src') || '')) {
+                    bypassThumb(img);
+                }
+            } else {
+                r.addedNodes.forEach((n) => {
+                    if (!(n instanceof Element)) return;
+                    if (n instanceof HTMLImageElement) bypassThumb(n);
+                    else n.querySelectorAll?.('img[src*="/thumbnail?"]').forEach(bypassThumb);
+                });
+            }
+        }
+    });
+    thumbObserver.observe(document.documentElement, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['src'],
+    });
+}
+
 /* ------------------------------------------------------------------ réglages */
 
 const SETTINGS_HTML = `
@@ -573,7 +648,12 @@ function bindSettingsUi() {
             after?.();
         });
     };
-    bind('ac_enabled', 'enabled', { bool: true, after: () => syncForceNoResize() });
+    bind('ac_enabled', 'enabled', { bool: true, after: () => {
+        syncForceNoResize();
+        applyCss();
+        if (settings.enabled) scanThumbs();
+        else restoreThumbs();
+    } });
     bind('ac_char', 'applyChar', { bool: true });
     bind('ac_persona', 'applyPersona', { bool: true });
     bind('ac_group', 'applyGroup', { bool: true });
@@ -600,10 +680,26 @@ jQuery(async () => {
         }
     });
 
+    applyCss();
+    startThumbObserver();
+    scanThumbs();
+
     try {
         const { eventSource, event_types } = ctx();
-        eventSource.on(event_types.APP_READY, () => syncForceNoResize());
-        eventSource.on(event_types.SETTINGS_LOADED_AFTER, () => syncForceNoResize());
+        const sync = () => {
+            syncForceNoResize();
+            applyCss();
+            if (settings.enabled) scanThumbs();
+            else restoreThumbs();
+        };
+        eventSource.on(event_types.APP_READY, sync);
+        eventSource.on(event_types.SETTINGS_LOADED_AFTER, sync);
+        if (event_types.CHARACTER_EDITED) {
+            eventSource.on(event_types.CHARACTER_EDITED, () => setTimeout(refreshThumbs, 300));
+        }
+        if (event_types.PERSONA_CHANGED) {
+            eventSource.on(event_types.PERSONA_CHANGED, () => setTimeout(scanThumbs, 100));
+        }
     } catch (err) {
         console.debug(LOG, 'évènements indisponibles', err);
     }
