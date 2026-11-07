@@ -171,8 +171,8 @@ function showModal(img, file) {
         const overlay = document.createElement('div');
         overlay.className = 'ac-modal';
         overlay.innerHTML = `
-            <div class="ac-dialog" role="dialog" aria-modal="true" aria-labelledby="ac_title">
-                <p class="ac-title" id="ac_title">Recadrer l’avatar</p>
+            <div class="ac-dialog">
+                <p class="ac-title">Recadrer la photo</p>
                 <div class="ac-ratios">
                     <button type="button" data-ratio="2:3">2:3</button>
                     <button type="button" data-ratio="1:1">1:1</button>
@@ -195,7 +195,25 @@ function showModal(img, file) {
                 </div>
             </div>`;
 
-        document.body.appendChild(overlay);
+        // Plein écran au-dessus des panneaux ST (éditeur perso, drawers) et hors
+        // de tout ancêtre transformé qui casserait position:fixed. On évite
+        // role=dialog / aria-modal : iOS Safari en fait une fausse « petite
+        // fenêtre » dans la barre de titre, souvent sans afficher l'overlay.
+        overlay.setAttribute('role', 'presentation');
+        overlay.style.cssText = [
+            'position:fixed',
+            'top:0','left:0','right:0','bottom:0',
+            'width:100vw','height:100vh','height:100dvh',
+            'z-index:2147483646',
+            'display:flex','align-items:center','justify-content:center',
+            'padding:16px','margin:0','transform:none',
+            'background:rgba(0,0,0,0.78)',
+            'box-sizing:border-box',
+        ].join(';');
+        const prevOverflow = document.body.style.overflow;
+        const prevTitle = document.title;
+        document.body.style.overflow = 'hidden';
+        document.documentElement.appendChild(overlay);
 
         const viewport = overlay.querySelector('.ac-viewport');
         const preview = overlay.querySelector('.ac-viewport img');
@@ -219,6 +237,8 @@ function showModal(img, file) {
             if (closed) return;
             closed = true;
             overlay.remove();
+            document.body.style.overflow = prevOverflow;
+            if (document.title !== prevTitle) document.title = prevTitle;
             resolve(value);
         };
 
@@ -422,7 +442,10 @@ function showModal(img, file) {
             }
         });
 
-        requestAnimationFrame(fit);
+        requestAnimationFrame(() => {
+            fit();
+            setTimeout(fit, 50);
+        });
     });
 }
 

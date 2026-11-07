@@ -34,21 +34,32 @@
 }
 
 .ac-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    display: flex;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 2147483646 !important;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.65);
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    background: rgba(0, 0, 0, 0.78);
     box-sizing: border-box;
+    margin: 0 !important;
+    transform: none !important;
+    overflow: auto;
 }
 
 .ac-dialog {
     width: min(440px, 100%);
     max-height: 100%;
     overflow: auto;
+    position: relative;
+    z-index: 1;
     background: var(--SmartThemeBlurTintColor, var(--grey70, #222));
     color: var(--SmartThemeBodyColor, #eee);
     border: 1px solid var(--SmartThemeBorderColor, #444);
