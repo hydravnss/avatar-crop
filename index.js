@@ -7,8 +7,10 @@
  * contrôle du zoom. Cette extension remplace ce popup par un éditeur
  * (boutons +/−, pincement, glisser) et injecte déjà l'image recadrée.
  * On force « Ne jamais redimensionner les avatars » pour que le popup natif
- * ne s'ouvre pas ensuite. Compatible avec No Crop Avatar (loading_order 5 < 10) :
- * on intercepte en premier, puis on redispatche le fichier déjà recadré.
+ * ne s'ouvre pas ensuite. Sans zoom, l'image entière est posée sur une toile 2:3
+ * (bandes, sans rogner) : sinon les miniatures serveur (cover 96×144) zoomeraient
+ * encore les listes. Compatible avec No Crop Avatar (loading_order 5 < 10) :
+ * on intercepte en premier, puis on redispatche le fichier déjà préparé.
  */
 
 const MODULE_NAME = 'avatar_crop';
@@ -150,6 +152,53 @@ async function openEditor(input, file, meta) {
 
 function canvasToBlob(canvas, type, quality) {
     return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+/**
+ * Pose l'image entière au centre d'une toile au ratio donné, sans rogner.
+ * Nécessaire parce que ST fabrique les miniatures de liste avec cover(96×144) :
+ * une photo paysage envoyée telle quelle se retrouve zoomée dans le cercle.
+ */
+async function letterboxToRatio(img, file, ratioStr) {
+    const ratio = parseRatio(ratioStr === 'original' ? '2:3' : (ratioStr || '2:3'), img);
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    if (!iw || !ih) return file;
+
+    let cw = iw;
+    let ch = ih;
+    if (iw / ih > ratio) ch = iw / ratio;
+    else cw = ih * ratio;
+
+    const maxSide = Number(settings.maxSide) > 0 ? Number(settings.maxSide) : 1536;
+    let scale = 1;
+    if (Math.max(cw, ch) > maxSide) scale = maxSide / Math.max(cw, ch);
+
+    const W = Math.max(1, Math.round(cw * scale));
+    const H = Math.max(1, Math.round(ch * scale));
+    const dw = Math.round(iw * scale);
+    const dh = Math.round(ih * scale);
+    const dx = Math.round((W - dw) / 2);
+    const dy = Math.round((H - dh) / 2);
+
+    if (Math.abs(W - dw) <= 1 && Math.abs(H - dh) <= 1 && scale >= 0.999) {
+        return file;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const c = canvas.getContext('2d');
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = 'high';
+    c.fillStyle = '#111111';
+    c.fillRect(0, 0, W, H);
+    c.drawImage(img, dx, dy, dw, dh);
+
+    const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+    if (!blob) return file;
+    const base = (file.name || 'avatar').replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
 }
 
 function applyViewportSize(viewport, ratio) {
@@ -408,9 +457,10 @@ function showModal(img, file) {
 
         overlay.querySelector('.ac-ok').addEventListener('click', async () => {
             try {
-                // Pas zoomé = on envoie l'image entière, sans recadrage.
+                // Pas zoomé = image entière, posée sur une toile 2:3 (sans rogner)
+                // pour que les miniatures ST (cover 96×144) ne zooment plus les côtés.
                 if (userZoom <= 1.001) {
-                    finish(file);
+                    finish(await letterboxToRatio(img, file, '2:3'));
                     return;
                 }
                 const s = displayedScale();
@@ -497,7 +547,7 @@ const SETTINGS_HTML = `
         <label for="ac_max">Taille max du côté long (px)</label>
         <input type="number" id="ac_max" class="text_pole" min="256" max="4096" step="64">
       </div>
-      <div class="ac-hint">Pincer pour zoomer, glisser pour cadrer, ou utiliser les boutons − et +. Les GIF restent intacts.</div>
+      <div class="ac-hint">Pincer pour zoomer, glisser pour cadrer, ou utiliser les boutons − et +. Sans zoom, l’image entière est posée sur une toile 2:3 (bandes, sans recadrage) pour que les listes de SillyTavern ne zooment plus. Les GIF restent intacts.</div>
     </div>
   </div>
 </div>`;

@@ -19,7 +19,7 @@ Quand tu choisis une image pour l’avatar d’un bot :
 2. Choisis le ratio : **2:3** (portrait, standard des personnages ST), **1:1** (carré) ou **Original**.
 3. **Zoome** avec le bouton **+**, **dézoome** avec **−**, le curseur, la molette, ou un pincement.
 4. **Glisse** l’image pour cadrer le visages ou le détail que tu veux garder.
-5. Appuie sur **Valider** : seule la zone visible est enregistrée.
+5. Appuie sur **Valider** : si tu as zoomé, seule la zone visible est enregistrée. Si tu n’as pas zoomé, l’image entière est posée au centre d’une toile 2:3 (bandes sombres, sans recadrage) pour que les listes et miniatures de SillyTavern ne zooment plus.
 
 Les GIF sont envoyés tels quels, pour ne pas perdre l’animation.
 
